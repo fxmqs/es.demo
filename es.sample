@@ -1,0 +1,139 @@
+es: index   -> mappings -> rest:get/put/delete/
+
+db: databse -> table    -> insert/delete/update
+
+
+curl -H "Content-Type: application/json" -X PUT 'localhost:9200/devices-new' -d '
+{
+  "mappings": {
+    "device": {
+      "properties": {
+        "sn": {
+          "type": "text"
+        },
+        "model": {
+          "type": "text"
+        },
+        "version": {
+          "type": "text"
+        },
+        "region_level_1": {
+          "type": "text"
+        },
+        "region_level_2": {
+          "type": "text"
+        },
+        "region_level_3": {
+          "type": "text"
+        },
+        "vendor": {
+          "type": "text"
+        },
+        "first_regist_time": {
+          "type": "date",
+          "format": "strict_date_optional_time"
+        }
+      }
+    }
+  }
+}'
+
+-- 查询映射
+curl -X GET 'localhost:9200/devices-new/_mapping/device'
+
+-- 更新映射
+curl -H "Content-Type: application/json" -X PUT 'localhost:9200/devices-new/_mapping/device?pretty' -d '
+{
+  "properties": {
+    "model": {
+      "type": "text",
+      "index": "not_analyzed"
+    },
+    "version": {
+      "type": "text",
+      "index": "not_analyzed"
+    }
+  }
+}'
+
+-- 区域匹配
+curl -H "Content-Type: application/json" -X GET 'localhost:9200/devices-new/device/_search?from=1000&size=10' -d '
+{
+    "query" : {
+        "match" : {
+            "region_level_1" : "中国"
+        }
+    }
+}
+'
+
+-- 区域匹配 + 时间倒序
+curl -H "Content-Type: application/json" -X GET 'localhost:9200/devices-new/device/_search' -d '
+{
+    "query" : {
+        "match" : {
+            "region_level_1" : "中国"
+        }
+    }, 
+    "sort": { "first_regist_time": { "order": "desc" }}
+}
+'
+
+-- 设备版本 + 设备型号 + 时间
+curl -H "Content-Type: application/json" -X GET 'localhost:9200/devices-new/device/_search' -d '
+{
+  
+  "query": {
+    "bool" : {
+      "must": [{ "match":   { "model": "Mm45Anu0sG6redij"  }},
+               { "match":   { "version": "version4SbDNpx5EOHCL9FBWkcT8jdIViYJUstl"}}],
+        "filter" : {
+            "range" : {
+                "first_regist_time" : { "lt" : "2016-07-01T" } 
+            }
+        }
+    }
+  },
+  "sort": { "first_regist_time": { "order": "desc" }}
+}
+'
+
+-- 设备型号 + 时间倒序
+curl -H "Content-Type: application/json" -X GET 'localhost:9200/devices-new/device/_search' -d '
+{
+  
+  "query": {
+    "bool" : {
+      "must": { "match":   { "version": "version"}} 
+    }
+  }, 
+  "sort": { "first_regist_time": { "order": "desc" }}
+}
+'
+
+-- 设备型号模型 + 时间倒序
+curl -H "Content-Type: application/json" -X GET 'localhost:9200/devices-new/device/_search' -d '
+{
+  
+  "query": {
+    "match" : { "version": {"query": "version"}}}
+    }
+  }, 
+  "sort": { "first_regist_time": { "order": "desc" }}
+}
+'
+
+-- 时间
+curl -H "Content-Type: application/json" -X GET 'localhost:9200/devices-new/device/_search' -d '
+{
+  "query" : {
+    "bool" : {
+        "filter" : {
+            "range" : {
+                "first_regist_time" : { "lt" : "2016-07-01T" } 
+            }
+        }
+    }
+  }
+}
+'
